@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "水印去除工具网站",
   "scripts": {
+    "build": "vite build",
     "deploy": "node deploy.js"
   },
   "dependencies": {
