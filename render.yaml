@@ -1,0 +1,17 @@
+services:
+  # 后端服务
+  - type: web
+    name: watermark-remover-api
+    env: node
+    region: singapore # 您可以选择离您用户最近的区域, e.g., oregon, frankfurt
+    plan: free # 使用免费套餐
+    rootDir: ./backend
+    buildCommand: "npm install"
+    startCommand: "npm start"
+    envVars:
+      - key: TRON_API_KEY
+        sync: false # 推荐, 这样您就可以在Render的UI中单独设置, 不会提交到git
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: NODE_VERSION
+        value: 18 # 指定一个推荐的Node.js版本 
