@@ -1,0 +1,23 @@
+{
+  "name": "watermark-remover-web",
+  "version": "1.0.0",
+  "description": "水印去除工具网站",
+  "scripts": {
+    "dev": "vite --port 8000",
+    "build": "vite build",
+    "deploy": "node deploy.js",
+    "deploy-worker": "node deploy-worker.js"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.8",
+    "glob": "^10.3.10",
+    "node-ssh": "^13.1.0",
+    "tailwindcss": "^4.1.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.10",
+    "autoprefixer": "^10.4.21",
+    "vite": "^6.3.5",
+    "wrangler": "^3.114.9"
+  }
+}

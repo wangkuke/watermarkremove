@@ -1,0 +1,10 @@
+name = "watermark-remover-user-api"
+main = "user-api.js"
+compatibility_date = "2023-01-01"
+
+kv_namespaces = [
+  { binding = "USER_DATA", id = "c550f2de45354f45b42126df3501f592" }
+]
+
+[triggers]
+crons = [] 
