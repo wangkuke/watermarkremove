@@ -2312,28 +2312,6 @@
                     // 生成订单ID
                     const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(7)}`;
                     
-                    // 调用后端API创建支付订单
-                    const response = await fetch(`${CONFIG.API_BASE_URL}/create-tron-order`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            orderId: orderId,
-                            amount: price,
-                            userEmail: loggedInUser.email,
-                            plan: plan
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error("支付请求失败:", errorText);
-                        throw new Error('支付请求失败');
-                    }
-                    
-                    const data = await response.json();
-                    
                     // 存储待支付订单信息
                     localStorage.setItem('pendingPayment', JSON.stringify({
                         orderId: orderId,
@@ -2342,31 +2320,110 @@
                         timestamp: Date.now()
                     }));
 
-                    // 显示TRC20-USDT支付二维码和地址
-                    const paymentModal = document.createElement('div');
-                    paymentModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-                    paymentModal.innerHTML = `
-                        <div class="bg-white p-6 rounded-lg max-w-md w-full mx-4">
-                            <h3 class="text-xl font-bold mb-4">${i18next.t('payment_modal_title', { amount: price })}</h3>
-                            <div class="mb-4">
-                                <p class="text-sm text-gray-600 mb-2">${i18next.t('payment_modal_address')}</p>
-                                <div class="flex items-center">
-                                    <input type="text" value="${data.tronAddress}" readonly class="w-full p-2 border rounded" id="tron-address">
-                                    <button onclick="copyToClipboard('tron-address')" class="ml-2 px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">${i18next.t('payment_modal_copy')}</button>
+                    // 根据套餐类型显示不同的支付方式
+                    if (plan === '包月专业版') {
+                        // 显示NOWPayments支付小部件
+                        const paymentModal = document.createElement('div');
+                        paymentModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                        paymentModal.innerHTML = `
+                            <div class="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+                                <h3 class="text-xl font-bold mb-4">包月专业版 - $${price}</h3>
+                                <p class="text-gray-600 mb-4">请使用以下支付小部件完成支付：</p>
+                                <div class="mb-4 flex justify-center">
+                                    <iframe src="https://nowpayments.io/embeds/payment-widget?iid=5093451613" 
+                                            width="410" height="696" 
+                                            frameborder="0" scrolling="no" 
+                                            style="overflow-y: hidden;"
+                                            onload="setupNOWPaymentCallback()">
+                                        Can't load widget
+                                    </iframe>
                                 </div>
+                                <div class="text-center">
+                                    <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                                            class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                                        关闭
+                                    </button>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-4">支付完成后，您的会员权限将自动激活</p>
                             </div>
-                            <div class="mb-4">
-                                <p class="text-sm text-gray-600 mb-2">${i18next.t('payment_modal_qrcode')}</p>
-                                <img src="${data.qrCodeUrl}" alt="${i18next.t('payment_modal_qrcode_alt')}" class="w-full">
+                        `;
+                        document.body.appendChild(paymentModal);
+                    } else if (plan === '终身免费版') {
+                        // 显示NOWPayments支付小部件（终身版）
+                        const paymentModal = document.createElement('div');
+                        paymentModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                        paymentModal.innerHTML = `
+                            <div class="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+                                <h3 class="text-xl font-bold mb-4">终身免费版 - $${price}</h3>
+                                <p class="text-gray-600 mb-4">请使用以下支付小部件完成支付：</p>
+                                <div class="mb-4 flex justify-center">
+                                    <iframe src="https://nowpayments.io/embeds/payment-widget?iid=4334409990" 
+                                            width="410" height="696" 
+                                            frameborder="0" scrolling="no" 
+                                            style="overflow-y: hidden;"
+                                            onload="setupNOWPaymentCallback()">
+                                        Can't load widget
+                                    </iframe>
+                                </div>
+                                <div class="text-center">
+                                    <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                                            class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                                        关闭
+                                    </button>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-4">支付完成后，您的终身会员权限将自动激活</p>
                             </div>
-                            <div class="text-center">
-                                <button onclick="checkTronPayment('${orderId}')" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mr-2">${i18next.t('payment_modal_paid')}</button>
-                                <button onclick="this.parentElement.parentElement.parentElement.remove()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">${i18next.t('payment_modal_cancel')}</button>
+                        `;
+                        document.body.appendChild(paymentModal);
+                    } else {
+                        // 其他套餐使用原有的TRC20支付方式
+                        const response = await fetch(`${CONFIG.API_BASE_URL}/create-tron-order`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                orderId: orderId,
+                                amount: price,
+                                userEmail: loggedInUser.email,
+                                plan: plan
+                            })
+                        });
+                        
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error("支付请求失败:", errorText);
+                            throw new Error('支付请求失败');
+                        }
+                        
+                        const data = await response.json();
+
+                        // 显示TRC20-USDT支付二维码和地址
+                        const paymentModal = document.createElement('div');
+                        paymentModal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+                        paymentModal.innerHTML = `
+                            <div class="bg-white p-6 rounded-lg max-w-md w-full mx-4">
+                                <h3 class="text-xl font-bold mb-4">${i18next.t('payment_modal_title', { amount: price })}</h3>
+                                <div class="mb-4">
+                                    <p class="text-sm text-gray-600 mb-2">${i18next.t('payment_modal_address')}</p>
+                                    <div class="flex items-center">
+                                        <input type="text" value="${data.tronAddress}" readonly class="w-full p-2 border rounded" id="tron-address">
+                                        <button onclick="copyToClipboard('tron-address')" class="ml-2 px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">${i18next.t('payment_modal_copy')}</button>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <p class="text-sm text-gray-600 mb-2">${i18next.t('payment_modal_qrcode')}</p>
+                                    <img src="${data.qrCodeUrl}" alt="${i18next.t('payment_modal_qrcode_alt')}" class="w-full">
+                                </div>
+                                <div class="text-center">
+                                    <button onclick="checkTronPayment('${orderId}')" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 mr-2">${i18next.t('payment_modal_paid')}</button>
+                                    <button onclick="this.parentElement.parentElement.parentElement.remove()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">${i18next.t('payment_modal_cancel')}</button>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-4">${i18next.t('payment_modal_network_notice')}</p>
                             </div>
-                            <p class="text-sm text-gray-500 mt-4">${i18next.t('payment_modal_network_notice')}</p>
-                        </div>
-                    `;
-                    document.body.appendChild(paymentModal);
+                        `;
+                        document.body.appendChild(paymentModal);
+                    }
                     
                 } catch (error) {
                     console.error('支付处理错误:', error);
@@ -2414,6 +2471,51 @@
 
                 updateLoginStatusUI();
                 alert(i18next.t('payment_success', { plan: plan }));
+            }
+
+            // 设置NOWPayments支付回调
+            window.setupNOWPaymentCallback = function() {
+                // 监听来自NOWPayments iframe的消息
+                window.addEventListener('message', function(event) {
+                    // 验证消息来源
+                    if (event.origin !== 'https://nowpayments.io') {
+                        return;
+                    }
+                    
+                    // 处理支付成功消息
+                    if (event.data && event.data.type === 'payment_success') {
+                        console.log("收到NOWPayments支付成功消息:", event.data);
+                        handleNOWPaymentSuccess(event.data);
+                    }
+                    
+                    // 处理支付失败消息
+                    if (event.data && event.data.type === 'payment_failed') {
+                        console.log("NOWPayments支付失败:", event.data);
+                        alert("支付失败，请重试");
+                    }
+                });
+            }
+
+            // 处理NOWPayments支付成功
+            window.handleNOWPaymentSuccess = function(paymentData) {
+                console.log("NOWPayments支付成功:", paymentData);
+                
+                // 获取待支付订单信息
+                const pendingPayment = JSON.parse(localStorage.getItem('pendingPayment'));
+                if (!pendingPayment) {
+                    console.error("未找到待支付订单信息");
+                    return;
+                }
+                
+                // 调用全局的支付成功处理函数
+                handlePaymentSuccess(pendingPayment.plan);
+                
+                // 移除支付模态框
+                const modal = document.querySelector('.fixed.inset-0.bg-black.bg-opacity-50');
+                if (modal) modal.remove();
+                
+                // 清除待支付订单信息
+                localStorage.removeItem('pendingPayment');
             }
 
             // 修改 OpenCV 加载检查
@@ -2839,6 +2941,35 @@
                     console.error("模拟登录 - 获取云端会员数据出错:", error);
                     updateLoginStatusUI();
                 });
+        }
+        
+        // 模拟NOWPayments支付成功（用于测试）
+        function simulateNOWPaymentSuccess() {
+            console.log("模拟NOWPayments支付成功");
+            
+            // 获取待支付订单信息
+            const pendingPayment = JSON.parse(localStorage.getItem('pendingPayment'));
+            if (!pendingPayment) {
+                console.error("未找到待支付订单信息，请先点击购买按钮");
+                return "错误：未找到待支付订单信息";
+            }
+            
+            // 模拟支付成功的数据
+            const mockPaymentData = {
+                type: 'payment_success',
+                orderId: pendingPayment.orderId,
+                amount: pendingPayment.amount,
+                currency: 'USD',
+                status: 'confirmed',
+                plan: pendingPayment.plan
+            };
+            
+            console.log("模拟支付数据:", mockPaymentData);
+            
+            // 调用支付成功处理函数
+            handleNOWPaymentSuccess(mockPaymentData);
+            
+            return `NOWPayments支付成功模拟完成 - ${pendingPayment.plan}`;
         }
         
         // JWT解析函数 (用于从Google ID Token中获取用户信息)
